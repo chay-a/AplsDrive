@@ -1,0 +1,23 @@
+{
+  "name": "alpsdrive",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/chay-a/AplsDrive.git"
+  },
+  "author": "Chaya",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chay-a/AplsDrive/issues"
+  },
+  "homepage": "https://github.com/chay-a/AplsDrive#readme",
+  "dependencies": {
+    "express": "^4.17.3"
+  }
+}
