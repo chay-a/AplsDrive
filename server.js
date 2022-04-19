@@ -49,13 +49,19 @@
 //}
 
 import express from "express";
+import os from "os";
+import { mkdir } from "fs/promises";
 
 export const start = () => {
   const app = express();
   const port = 3000;
+  const path = os.tmpdir() + "/back/";
 
   app.use(express.static("frontend"));
 
+  app.post("/api/drive", (req, res) => {
+    mkdir(path + req.query.name);
+  });
 
   app.get("/api/drive", (req, res) => {
     res.send([
