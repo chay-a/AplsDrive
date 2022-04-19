@@ -56,6 +56,7 @@ export const start = () => {
 
   app.use(express.static("frontend"));
 
+
   app.get("/api/drive", (req, res) => {
     res.send([
       {
@@ -68,6 +69,28 @@ export const start = () => {
         isFolder: false,
       },
     ]);
+  });
+
+  app.get("/api/drive/:name", (req, res) => {
+    let data;
+    if (req.params.name === "Personnel") {
+      data = [
+        {
+          name: "Autre dossier",
+          isFolder: true,
+        },
+        {
+          name: "passeport",
+          size: 1003,
+          isFolder: false,
+        },
+      ];
+    } else if (req.params.name === "avis imposition") {
+      data = "hello";
+    } else {
+      data = "error";
+    }
+    res.send(data);
   });
 
   app.listen(port, () => {
