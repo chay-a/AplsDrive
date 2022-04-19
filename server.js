@@ -1,5 +1,20 @@
-exports.start = () => {
-    const express = require('express')
+// exports.start = () => {
+//     const express = require('express')
+//     const app = express()
+//     const port = 3000
+
+//     // app.get('/', (req, res) => {
+//     //     res.send('Bonjour !')
+//     // })
+//     app.listen(port, () => {
+//         console.log(`Example app listening on port ${port}`)
+//     })
+
+//     app.use('/',express.static('frontend'))
+// }
+
+import express from 'express';
+export const start = () => {
     const app = express()
     const port = 3000
 
