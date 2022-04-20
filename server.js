@@ -50,8 +50,7 @@
 
 import express from "express";
 import os from "os";
-import { mkdir } from "fs/promises";
-import { readdir, lstat, readFile } from "fs/promises";
+import { mkdir, readdir, lstat, readFile } from "fs/promises";
 
 export const start = () => {
   const app = express();
@@ -61,9 +60,23 @@ export const start = () => {
   app.use(express.static("frontend"));
 
   app.post("/api/drive", (req, res) => {
-    res.append("status", 200);
-    res.append("Content-Type", "application/json");
-    mkdir(path + req.query.name);
+    const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
+    if (validFolderName.test(req.query.name)) {
+      mkdir(path + req.query.name)
+        .then(() => {
+          res.append("status", 200);
+          res.append("Content-Type", "application/json");
+          getDatas(res, path);
+        })
+        .catch(error => {
+          if (error.code == "EEXIST") {
+            return console.log('dossier existe déjà');
+          }
+        });
+    } else {
+      res.append("status", 400);
+      console.log('nom de dossier non valide');
+    }
   });
 
   app.get("/api/drive", (req, res) => {
@@ -72,17 +85,46 @@ export const start = () => {
     getDatas(res, path);
   });
 
+  app.post("/api/drive/:folder", (req, res) => {
+    lstat(path + req.params.folder)
+      .then((fullPath) => {
+        if (fullPath.isDirectory()) {
+          const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
+          if (validFolderName.test(req.query.name)) {
+            mkdir(path + req.params.folder + '/' + req.query.name)
+              .then(() => {
+                res.append("status", 200);
+                res.append("Content-Type", "application/json");
+                getDatas(res, path);
+              })
+              .catch(error => {
+                if (error.code == "EEXIST") {
+                  return console.log('dossier existe déjà');
+                }
+              });
+          } else {
+            res.append("status", 400);
+            console.log('nom de dossier non valide');
+          }
+        } else {
+          res.append("status", 404);
+          throw new Error('erreurrrrr');
+        }
+      })
+      .catch(error => console.log(error))
+  })
+
   app.get("/api/drive/:name", (req, res) => {
     lstat(path + req.params.name).then((response) => {
       if (response.isDirectory()) {
         res.append("status", 200);
-        res.append("Content-Type", "application/octet-stream");
+        res.append("Content-Type", "application/json");
         getDatas(res, path + req.params.name + "/");
       } else if (response.isFile()) {
         res.append("status", 200);
         res.append("Content-Type", "application/octet-stream");
-        readFile(path + req.params.name, 'utf8').then((response)=> {
-            console.log(response);
+        readFile(path + req.params.name, 'utf8').then((response) => {
+          res.send(response);
         })
       } else {
         res.append("status", 404);
@@ -97,10 +139,11 @@ export const start = () => {
 };
 
 function getDatas(res, path) {
-  let datas = [];
+
   let promises = [];
   const dir = readdir(path)
     .then((response) => {
+      let datas = [];
       for (const file of response) {
         let data = {};
         promises.push(
@@ -120,8 +163,9 @@ function getDatas(res, path) {
             })
         );
       }
+      return datas;
     })
-    .then(() => {
+    .then((datas) => {
       Promise.all(promises).then(() => {
         res.send(datas);
       });
