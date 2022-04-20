@@ -50,7 +50,7 @@
 
 import express from "express";
 import os from "os";
-import { mkdir, readdir, lstat, readFile } from "fs/promises";
+import { mkdir, readdir, lstat, readFile, rmdir } from "fs/promises";
 
 export const start = () => {
   const app = express();
@@ -112,7 +112,19 @@ export const start = () => {
         }
       })
       .catch(error => console.log(error))
-  })
+  });
+
+  app.delete("/api/drive/:name", (req, res) => {
+    const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
+    if (validFolderName.test(req.params.name)) {
+      rmdir(path + req.params.name, {recursive: true})
+        .then(() => {
+          res.append("status", 200);
+          res.append("Content-Type", "application/json");
+          getDatas(res, path);
+        })
+    }
+  });
 
   app.get("/api/drive/:name", (req, res) => {
     lstat(path + req.params.name).then((response) => {
