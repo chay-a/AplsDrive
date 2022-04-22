@@ -52,97 +52,42 @@ import express from "express";
 import os from "os";
 import { mkdir, readdir, lstat, readFile, rmdir } from "fs/promises";
 
+const path = os.tmpdir() + "/back/";
+
 export const start = () => {
   const app = express();
   const port = 3000;
-  const path = os.tmpdir() + "/back/";
 
   app.use(express.static("frontend"));
 
-  app.post("/api/drive", (req, res) => {
-    const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
-    if (validFolderName.test(req.query.name)) {
-      mkdir(path + req.query.name)
-        .then(() => {
-          res.append("status", 200);
-          res.append("Content-Type", "application/json");
-          getDatas(res, path);
-        })
-        .catch(error => {
-          if (error.code == "EEXIST") {
-            return console.log('dossier existe déjà');
-          }
-        });
-    } else {
-      res.append("status", 400);
-      console.log('nom de dossier non valide');
-    }
+  app.get("/api/drive", (req, res) => {
+    displayItems(res, path);
   });
 
-  app.get("/api/drive", (req, res) => {
-    res.append("status", 200);
-    res.append("Content-Type", "application/json");
-    getDatas(res, path);
+  app.post("/api/drive", (req, res) => {
+    addNewFolder(path + req.query.name, req, res);
   });
+
 
   app.post("/api/drive/:folder", (req, res) => {
-    lstat(path + req.params.folder)
-      .then((fullPath) => {
-        if (fullPath.isDirectory()) {
-          const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
-          if (validFolderName.test(req.query.name)) {
-            mkdir(path + req.params.folder + '/' + req.query.name)
-              .then(() => {
-                res.append("status", 200);
-                res.append("Content-Type", "application/json");
-                getDatas(res, path);
-              })
-              .catch(error => {
-                if (error.code == "EEXIST") {
-                  return console.log('dossier existe déjà');
-                }
-              });
-          } else {
-            res.append("status", 400);
-            console.log('nom de dossier non valide');
-          }
+    isFolder(req)
+      .then((isFolder) => {
+        if (isFolder) {
+          addNewFolder(path + req.params.folder + '/' + req.query.name, req, res);
         } else {
           res.append("status", 404);
           throw new Error('erreurrrrr');
         }
       })
-      .catch(error => console.log(error))
+      .catch(error => console.log(error));
   });
 
   app.delete("/api/drive/:name", (req, res) => {
-    const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
-    if (validFolderName.test(req.params.name)) {
-      rmdir(path + req.params.name, {recursive: true})
-        .then(() => {
-          res.append("status", 200);
-          res.append("Content-Type", "application/json");
-          getDatas(res, path);
-        })
-    }
+    deleteItem(req, res);
   });
 
   app.get("/api/drive/:name", (req, res) => {
-    lstat(path + req.params.name).then((response) => {
-      if (response.isDirectory()) {
-        res.append("status", 200);
-        res.append("Content-Type", "application/json");
-        getDatas(res, path + req.params.name + "/");
-      } else if (response.isFile()) {
-        res.append("status", 200);
-        res.append("Content-Type", "application/octet-stream");
-        readFile(path + req.params.name, 'utf8').then((response) => {
-          res.send(response);
-        })
-      } else {
-        res.append("status", 404);
-        res.send("error");
-      }
-    });
+    displayAccordingToItemType(req, res);
   });
 
   app.listen(port, () => {
@@ -150,39 +95,111 @@ export const start = () => {
   });
 };
 
-function getDatas(res, path) {
-
-  let promises = [];
-  const dir = readdir(path)
-    .then((response) => {
-      let datas = [];
-      for (const file of response) {
-        let data = {};
-        promises.push(
-          lstat(path + file)
-            .then((response) => {
-              data.name = file;
-              if (response.isDirectory()) {
-                data.isFolder = true;
-              } else {
-                data.isFolder = false;
-                data.size = response.size;
-              }
-              datas.push(data);
-            })
-            .catch((error) => {
-              console.log(error);
-            })
-        );
-      }
-      return datas;
-    })
-    .then((datas) => {
-      Promise.all(promises).then(() => {
-        res.send(datas);
+function deleteItem(req, res) {
+  const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
+  if (validFolderName.test(req.params.name)) {
+    rmdir(path + req.params.name, { recursive: true })
+      .then(() => {
+        displayItems(res, path);
       });
-    })
-    .catch((error) => {
-      console.log(error);
+  }
+}
+
+function isFolder(req) {
+  return lstat(path + req.params.folder)
+    .then(fullPath => {
+      if (fullPath.isDirectory()) {
+        return true;
+      } else {
+        return false;
+      }
     });
+}
+
+function addNewFolder(pathFolder, req, res) {
+  const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
+  if (validFolderName.test(req.query.name)) {
+    createFolder(pathFolder, res);
+  } else {
+    res.append("status", 400);
+    console.log('nom de dossier non valide');
+  }
+}
+
+function createFolder(pathFolder, res) {
+  mkdir(pathFolder)
+    .then(() => {
+      displayItems(res, path);
+    })
+    .catch(error => {
+      if (error.code == "EEXIST") {
+        return console.log('dossier existe déjà');
+      }
+    });
+}
+
+function displayAccordingToItemType(req, res) {
+  lstat(path + req.params.name)
+    .then((stats) => {
+      if (stats.isDirectory()) {
+        displayItems(res, path + req.params.name + "/");
+      } else if (stats.isFile()) {
+        getFile(req, res);
+      } else {
+        res.append("status", 404);
+        res.send("error");
+      }
+    });
+}
+
+function getFile(req, res) {
+  readFile(path + req.params.name, 'utf8')
+    .then((fileContent) => {
+      res.append("status", 200);
+      res.append("Content-Type", "application/octet-stream");
+      res.send(fileContent);
+    });
+}
+
+function displayItems(res, path) {
+  getArrayOfDirents(path)
+    .then(dirents => {
+      return Promise.all(LoopToCreateDatas(dirents, path));
+    })
+    .then(itemsArray => {
+      res.append('status', 201);
+      res.append("Content-Type", "application/json");
+      res.send(itemsArray);
+    })
+}
+
+function LoopToCreateDatas(dirents, path) {
+  return dirents.map(dirent => populateJSON(dirent, path));
+}
+
+function getArrayOfDirents(path) {
+  return readdir(path, { withFileTypes: true })
+    .then((dirents) => dirents);
+}
+
+function populateJSON(dirent, path) {
+  if (dirent.isDirectory()) {
+    return {
+      name: dirent.name,
+      isFolder: true
+    }
+  } else {
+    return getSize(dirent, path)
+      .then(size => {
+        return {
+          name: dirent.name,
+          isFolder: false,
+          size: size
+        }
+      })
+  }
+}
+
+function getSize(dirent, path) {
+  return lstat(path + dirent.name).then(stat => stat.size)
 }
