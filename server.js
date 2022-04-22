@@ -50,7 +50,7 @@
 
 import express from "express";
 import os from "os";
-import { mkdir, readdir, lstat, readFile, rmdir } from "fs/promises";
+import { mkdir, readdir, lstat, readFile, rmdir, writeFile } from "fs/promises";
 
 const path = os.tmpdir() + "/back/";
 
@@ -68,7 +68,14 @@ export const start = () => {
     addNewFolder(path + req.query.name, req, res);
   });
 
-
+  app.put('/api/drive', (req, res) => {
+    console.log(req.files);
+  });
+  
+  app.get("/api/drive/:name", (req, res) => {
+    displayAccordingToItemType(req, res);
+  });
+  
   app.post("/api/drive/:folder", (req, res) => {
     isFolder(req)
       .then((isFolder) => {
@@ -83,11 +90,21 @@ export const start = () => {
   });
 
   app.delete("/api/drive/:name", (req, res) => {
-    deleteItem(req, res);
+    deleteItem(path + req.params.name,req, res);
   });
 
-  app.get("/api/drive/:name", (req, res) => {
-    displayAccordingToItemType(req, res);
+  app.delete("/api/drive/:folder/:name", (req, res) => {
+    isFolder(req)
+    .then((isFolder) => {
+      if (isFolder) {
+        const pathItem = path + req.params.folder + '/' + req.params.name;
+        deleteItem(pathItem,req, res);
+      } else {
+        res.append("status", 404);
+        throw new Error('erreurrrrr');
+      }
+    })
+    .catch(error => console.log(error));
   });
 
   app.listen(port, () => {
@@ -95,14 +112,11 @@ export const start = () => {
   });
 };
 
-function deleteItem(req, res) {
-  const validFolderName = new RegExp("^[a-zA-Z]+$", "gm");
-  if (validFolderName.test(req.params.name)) {
-    rmdir(path + req.params.name, { recursive: true })
+function deleteItem(pathItem, req, res) {
+    rmdir(pathItem, { recursive: true })
       .then(() => {
         displayItems(res, path);
       });
-  }
 }
 
 function isFolder(req) {
