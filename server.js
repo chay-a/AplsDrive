@@ -1,53 +1,3 @@
-// exports.start = () => {
-//     const express = require('express');
-//     const app = express();
-//     const port = 3000;
-//     const os = require('os');
-
-//     app.use(express.static("frontend"));
-
-//   app.get("/api/drive", (req, res) => {
-//     console.log(os.tmpdir());
-//     res.send([
-//       {
-//         name: "Personnel",
-//         isFolder: true,
-//       },
-//       {
-//         name: "avis imposition",
-//         size: 1337,
-//         isFolder: false,
-//       },
-//     ]);
-//   });
-
-//   app.get("/api/drive/:name", (req, res) => {
-//     let data;
-//     if (req.params.name === "Personnel") {
-//       data = [
-//         {
-//           name: "Autre dossier",
-//           isFolder: true,
-//         },
-//         {
-//           name: "passeport",
-//           size: 1003,
-//           isFolder: false,
-//         },
-//       ];
-//     } else if (req.params.name === "avis imposition") {
-//       data = "hello";
-//     } else {
-//       data = "error";
-//     }
-//     res.send(data);
-//   });
-
-//   app.listen(port, () => {
-//     console.log(`Example app listening on port ${port}`);
-//   });
-//}
-
 import express from "express";
 import fileUpload from "express-fileupload";
 import os from "os";
@@ -91,14 +41,14 @@ export const start = () => {
           throw new Error('erreurrrrr');
         }
       })
-      .catch(() => res.status.send("Le dossier n'existe pas"));
+      .catch(() => res.status(404).send("Le dossier n'existe pas"));
   });
 
   app.put('/api/drive/*', (req, res) => {
     if (req.params["0"]) {
       addFile(path + req.params["0"] + '/', req.files.file, res);
     } else {
-      res.status(404).send("dossier n'existe pas");
+      res.status(404).send("Le dossier n'existe pas");
     }
   });
 
