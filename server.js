@@ -10,7 +10,11 @@ export const start = () => {
   const port = 3000;
 
   app.use(express.static("frontend"));
-  app.use(fileUpload());
+  app.use(fileUpload({
+    headers: {
+      "content-type": 'multipart/form-data'
+    }
+  }));
 
   app.get("/api/drive", (req, res) => {
     displayItems(res, path);
