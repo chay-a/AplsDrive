@@ -88,11 +88,10 @@ export const start = () => {
         if (isFolder) {
           addNewFolder(path + req.params["0"] + req.query.name, req, res);
         } else {
-          res.append("status", 404);
           throw new Error('erreurrrrr');
         }
       })
-      .catch(error => console.log(error));
+      .catch(() => res.status.send("Le dossier n'existe pas"));
   });
 
   app.put('/api/drive/*', (req, res) => {
@@ -128,7 +127,7 @@ function addFile(pathFile, file, res) {
     .then(() => {
       displayItems(res, pathFile);
     })
-    .catch(error => console.log('erreur', error));
+    .catch(() => res.status(400).send("Aucun fichier présent dans la requête"));
 }
 
 function deleteItem(pathItem, req, res) {
@@ -136,17 +135,13 @@ function deleteItem(pathItem, req, res) {
     .then(() => {
       displayItems(res, path);
     })
-    .catch(error => console.log(error));
+    .catch(() => res.status(400).send("L'élément n'a pas pu être supprimé"));
 }
 
 function isFolder(pathFolder, req) {
   return lstat(pathFolder)
     .then(fullPath => {
-      if (fullPath.isDirectory()) {
-        return true;
-      } else {
-        return false;
-      }
+      return fullPath.isDirectory();
     });
 }
 
@@ -155,8 +150,7 @@ function addNewFolder(pathFolder, req, res) {
   if (validFolderName.test(req.query.name)) {
     createFolder(pathFolder, res);
   } else {
-    res.append("status", 400);
-    console.log('nom de dossier non valide');
+    res.status(400).send("Le dossier contient des caractères non-alphanumériques");
   }
 }
 
@@ -167,7 +161,7 @@ function createFolder(pathFolder, res) {
     })
     .catch(error => {
       if (error.code == "EEXIST") {
-        return console.log('dossier existe déjà');
+        return res.status(400).send("Le dossier existe déjà");
       }
     });
 }
@@ -180,8 +174,7 @@ function displayAccordingToItemType(pathFolder, req, res) {
       } else if (stats.isFile()) {
         getFile(req, res);
       } else {
-        res.append("status", 404);
-        res.send("error");
+        res.status(400).send("error");
       }
     });
 }
