@@ -10,6 +10,7 @@ export const start = () => {
   const port = 3000;
 
   app.use(express.static("frontend"));
+
   app.use(fileUpload({
     headers: {
       "content-type": 'multipart/form-data'
@@ -63,11 +64,10 @@ export const start = () => {
           const pathItem = path + req.params["0"] + "/" + req.params.name + "/";
           deleteItem(pathItem, req, res);
         } else {
-          res.append("status", 404);
           throw new Error('erreurrrrr');
         }
       })
-      .catch(error => console.log(error));
+      .catch(() => res.status(404).send("Le dossier n'existe pas"));
   });
 
 
