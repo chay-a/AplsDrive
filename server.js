@@ -74,15 +74,19 @@ export const start = () => {
     addFile(path, req.files.file, res);
   });
 
-  app.get("/api/drive/:name", (req, res) => {
-    displayAccordingToItemType(req, res);
+  app.delete("/api/drive/:name", (req, res) => {
+    deleteItem(path + req.params.name, req, res);
   });
 
-  app.post("/api/drive/:folder", (req, res) => {
-    isFolder(req)
+  app.get("/api/drive/*", (req, res) => {
+    displayAccordingToItemType(path + req.params["0"],req, res);
+  });
+
+  app.post("/api/drive/*", (req, res) => {
+    isFolder(path + req.params["0"], req)
       .then((isFolder) => {
         if (isFolder) {
-          addNewFolder(path + req.params.folder + '/' + req.query.name, req, res);
+          addNewFolder(path + req.params["0"] + req.query.name, req, res);
         } else {
           res.append("status", 404);
           throw new Error('erreurrrrr');
@@ -91,15 +95,19 @@ export const start = () => {
       .catch(error => console.log(error));
   });
 
-  app.delete("/api/drive/:name", (req, res) => {
-    deleteItem(path + req.params.name, req, res);
+  app.put('/api/drive/*', (req, res) => {
+    if (req.params["0"]) {
+      addFile(path + req.params["0"] + '/', req.files.file, res);
+    } else {
+      res.status(404).send("dossier n'existe pas");
+    }
   });
 
-  app.delete("/api/drive/:folder/:name", (req, res) => {
-    isFolder(req)
+  app.delete("/api/drive/*/:name", (req, res) => {
+    isFolder(path + req.params["0"] + "/", req)
       .then((isFolder) => {
         if (isFolder) {
-          const pathItem = path + req.params.folder + '/' + req.params.name;
+          const pathItem = path + req.params["0"] + "/" + req.params.name + "/";
           deleteItem(pathItem, req, res);
         } else {
           res.append("status", 404);
@@ -109,13 +117,6 @@ export const start = () => {
       .catch(error => console.log(error));
   });
 
-  app.put('/api/drive/:folder', (req, res) => {
-    if (req.params.folder) {
-      addFile(path + req.params.folder + '/', req.files.file, res);
-    } else {
-      res.status(404).send("dossier n'existe pas");
-    }
-  });
 
   app.listen(port, () => {
     console.log(`Example app listening on port ${port}`);
@@ -134,11 +135,12 @@ function deleteItem(pathItem, req, res) {
   rmdir(pathItem, { recursive: true })
     .then(() => {
       displayItems(res, path);
-    });
+    })
+    .catch(error => console.log(error));
 }
 
-function isFolder(req) {
-  return lstat(path + req.params.folder)
+function isFolder(pathFolder, req) {
+  return lstat(pathFolder)
     .then(fullPath => {
       if (fullPath.isDirectory()) {
         return true;
@@ -170,11 +172,11 @@ function createFolder(pathFolder, res) {
     });
 }
 
-function displayAccordingToItemType(req, res) {
-  lstat(path + req.params.name)
+function displayAccordingToItemType(pathFolder, req, res) {
+  lstat(pathFolder)
     .then((stats) => {
       if (stats.isDirectory()) {
-        displayItems(res, path + req.params.name + "/");
+        displayItems(res, pathFolder);
       } else if (stats.isFile()) {
         getFile(req, res);
       } else {
