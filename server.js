@@ -49,6 +49,7 @@
 //}
 
 import express from "express";
+import fileUpload from "express-fileupload";
 import os from "os";
 import { mkdir, readdir, lstat, readFile, rmdir, writeFile } from "fs/promises";
 
@@ -59,6 +60,7 @@ export const start = () => {
   const port = 3000;
 
   app.use(express.static("frontend"));
+  app.use(fileUpload());
 
   app.get("/api/drive", (req, res) => {
     displayItems(res, path);
@@ -69,13 +71,13 @@ export const start = () => {
   });
 
   app.put('/api/drive', (req, res) => {
-    console.log(req.files);
+    addFile(path, req.files.file, res);
   });
-  
+
   app.get("/api/drive/:name", (req, res) => {
     displayAccordingToItemType(req, res);
   });
-  
+
   app.post("/api/drive/:folder", (req, res) => {
     isFolder(req)
       .then((isFolder) => {
@@ -90,21 +92,29 @@ export const start = () => {
   });
 
   app.delete("/api/drive/:name", (req, res) => {
-    deleteItem(path + req.params.name,req, res);
+    deleteItem(path + req.params.name, req, res);
   });
 
   app.delete("/api/drive/:folder/:name", (req, res) => {
     isFolder(req)
-    .then((isFolder) => {
-      if (isFolder) {
-        const pathItem = path + req.params.folder + '/' + req.params.name;
-        deleteItem(pathItem,req, res);
-      } else {
-        res.append("status", 404);
-        throw new Error('erreurrrrr');
-      }
-    })
-    .catch(error => console.log(error));
+      .then((isFolder) => {
+        if (isFolder) {
+          const pathItem = path + req.params.folder + '/' + req.params.name;
+          deleteItem(pathItem, req, res);
+        } else {
+          res.append("status", 404);
+          throw new Error('erreurrrrr');
+        }
+      })
+      .catch(error => console.log(error));
+  });
+
+  app.put('/api/drive/:folder', (req, res) => {
+    if (req.params.folder) {
+      addFile(path + req.params.folder + '/', req.files.file, res);
+    } else {
+      res.status(404).send("dossier n'existe pas");
+    }
   });
 
   app.listen(port, () => {
@@ -112,11 +122,19 @@ export const start = () => {
   });
 };
 
+function addFile(pathFile, file, res) {
+  writeFile(pathFile + file.name, file.data)
+    .then(() => {
+      displayItems(res, pathFile);
+    })
+    .catch(error => console.log('erreur', error));
+}
+
 function deleteItem(pathItem, req, res) {
-    rmdir(pathItem, { recursive: true })
-      .then(() => {
-        displayItems(res, path);
-      });
+  rmdir(pathItem, { recursive: true })
+    .then(() => {
+      displayItems(res, path);
+    });
 }
 
 function isFolder(req) {
